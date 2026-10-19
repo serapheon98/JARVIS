@@ -1,0 +1,85 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile and JARVIS system preferences",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 100 },
+        "email": { "type": "string", "maxLength": 200 },
+        "title": { "type": "string", "maxLength": 100 },
+        "role": { "type": "string", "maxLength": 100 },
+        "assistantName": { "type": "string", "maxLength": 50 },
+        "persona": { "type": "string", "enum": ["stark_butler", "tactical", "analytical", "witty"] },
+        "voiceName": { "type": "string", "maxLength": 50 },
+        "autoSpeak": { "type": "boolean" },
+        "soundEffectsEnabled": { "type": "boolean" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["uid", "name", "assistantName", "persona"]
+    },
+    "Task": {
+      "title": "Task",
+      "description": "User operational objective or mission directive",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 300 },
+        "priority": { "type": "string", "enum": ["critical", "high", "normal", "low"] },
+        "category": { "type": "string", "maxLength": 50 },
+        "deadline": { "type": "string", "maxLength": 50 },
+        "completed": { "type": "boolean" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "title", "priority", "completed"]
+    },
+    "MemoryDirective": {
+      "title": "MemoryDirective",
+      "description": "Personalized facts, habits, and directives stored in JARVIS memory",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "fact": { "type": "string", "maxLength": 1000 },
+        "category": { "type": "string", "enum": ["preference", "routine", "work", "biography", "directive"] },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "fact", "category"]
+    },
+    "ChatMessage": {
+      "title": "ChatMessage",
+      "description": "Conversational turn between user and JARVIS",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "role": { "type": "string", "enum": ["user", "assistant", "system"] },
+        "content": { "type": "string", "maxLength": 10000 },
+        "timestamp": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "role", "content"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "User document containing JARVIS personality preferences and profile"
+    },
+    "/users/{userId}/tasks/{taskId}": {
+      "schema": { "$ref": "#/entities/Task" },
+      "description": "User operational tasks and directives"
+    },
+    "/users/{userId}/memories/{memoryId}": {
+      "schema": { "$ref": "#/entities/MemoryDirective" },
+      "description": "Personalized user memories and behavioral directives"
+    },
+    "/users/{userId}/messages/{messageId}": {
+      "schema": { "$ref": "#/entities/ChatMessage" },
+      "description": "Historical message stream between user and JARVIS"
+    }
+  }
+}

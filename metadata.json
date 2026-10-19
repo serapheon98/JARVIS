@@ -1,0 +1,6 @@
+{
+  "name": "JARVIS Personal AI OS",
+  "description": "A personalized J.A.R.V.I.S. operating system assistant with voice synthesis, dynamic Stark Arc Reactor HUD, executive daily briefing, persistent memory bank, smart tasks, and custom protocols.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

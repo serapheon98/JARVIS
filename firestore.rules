@@ -1,0 +1,119 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny all access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Validation helper for UserProfile
+    function isValidUserProfile(data, userId) {
+      return data.keys().hasAll(['uid', 'name', 'assistantName', 'persona']) &&
+        data.keys().hasOnly(['uid', 'name', 'email', 'title', 'role', 'assistantName', 'persona', 'voiceName', 'autoSpeak', 'soundEffectsEnabled', 'updatedAt']) &&
+        data.uid is string && data.uid == userId &&
+        data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+        data.assistantName is string && data.assistantName.size() > 0 && data.assistantName.size() <= 50 &&
+        data.persona in ['stark_butler', 'tactical', 'analytical', 'witty'] &&
+        (!('role' in data) || (data.role is string && data.role.size() <= 100)) &&
+        (!('title' in data) || (data.title is string && data.title.size() <= 100)) &&
+        (!('email' in data) || (data.email is string && data.email.size() <= 200)) &&
+        (!('voiceName' in data) || (data.voiceName is string && data.voiceName.size() <= 50)) &&
+        (!('autoSpeak' in data) || (data.autoSpeak is bool)) &&
+        (!('soundEffectsEnabled' in data) || (data.soundEffectsEnabled is bool));
+    }
+
+    // Validation helper for Task
+    function isValidTask(data, userId) {
+      return data.keys().hasAll(['id', 'userId', 'title', 'priority', 'completed']) &&
+        data.keys().hasOnly(['id', 'userId', 'title', 'priority', 'category', 'deadline', 'completed', 'createdAt', 'updatedAt']) &&
+        data.id is string && data.id.size() <= 128 &&
+        data.userId is string && data.userId == userId &&
+        data.title is string && data.title.size() > 0 && data.title.size() <= 300 &&
+        data.priority in ['critical', 'high', 'normal', 'low'] &&
+        data.completed is bool &&
+        (!('category' in data) || (data.category is string && data.category.size() <= 50)) &&
+        (!('deadline' in data) || (data.deadline is string && data.deadline.size() <= 50));
+    }
+
+    // Validation helper for MemoryDirective
+    function isValidMemory(data, userId) {
+      return data.keys().hasAll(['id', 'userId', 'fact', 'category']) &&
+        data.keys().hasOnly(['id', 'userId', 'fact', 'category', 'createdAt']) &&
+        data.id is string && data.id.size() <= 128 &&
+        data.userId is string && data.userId == userId &&
+        data.fact is string && data.fact.size() > 0 && data.fact.size() <= 1000 &&
+        data.category in ['preference', 'routine', 'work', 'biography', 'directive'];
+    }
+
+    // Validation helper for ChatMessage
+    function isValidChatMessage(data, userId) {
+      return data.keys().hasAll(['id', 'userId', 'role', 'content']) &&
+        data.keys().hasOnly(['id', 'userId', 'role', 'content', 'timestamp', 'createdAt', 'toolInvocations', 'suggestions']) &&
+        data.id is string && data.id.size() <= 128 &&
+        data.userId is string && data.userId == userId &&
+        data.role in ['user', 'assistant', 'system'] &&
+        data.content is string && data.content.size() <= 10000;
+    }
+
+    // Match rules for /users/{userId}
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUserProfile(incoming(), userId);
+      allow update: if isOwner(userId) && isValidUserProfile(incoming(), userId) &&
+        incoming().uid == existing().uid;
+      allow delete: if isOwner(userId);
+
+      // Tasks subcollection
+      match /tasks/{taskId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(taskId) && isValidTask(incoming(), userId);
+        allow update: if isOwner(userId) && isValidId(taskId) && isValidTask(incoming(), userId) &&
+          incoming().userId == existing().userId &&
+          incoming().id == existing().id;
+        allow delete: if isOwner(userId) && isValidId(taskId);
+      }
+
+      // Memories subcollection
+      match /memories/{memoryId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(memoryId) && isValidMemory(incoming(), userId);
+        allow update: if isOwner(userId) && isValidId(memoryId) && isValidMemory(incoming(), userId) &&
+          incoming().userId == existing().userId &&
+          incoming().id == existing().id;
+        allow delete: if isOwner(userId) && isValidId(memoryId);
+      }
+
+      // Chat messages subcollection
+      match /messages/{messageId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(messageId) && isValidChatMessage(incoming(), userId);
+        allow update: if isOwner(userId) && isValidId(messageId) && isValidChatMessage(incoming(), userId) &&
+          incoming().userId == existing().userId;
+        allow delete: if isOwner(userId) && isValidId(messageId);
+      }
+    }
+  }
+}
